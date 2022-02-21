@@ -32,6 +32,10 @@ class RTCAudioDevice : public RefCountInterface {
   virtual int32_t RecordingDeviceName(uint16_t index,
                                       char name[kAdmMaxDeviceNameSize],
                                       char guid[kAdmMaxGuidSize]) = 0;
+  virtual int32_t GetPlayoutDevice( char name[kAdmMaxDeviceNameSize],
+                                    char guid[kAdmMaxGuidSize]) = 0;
+  virtual int32_t GetRecordingDevice(char name[kAdmMaxDeviceNameSize],
+                                     char guid[kAdmMaxGuidSize]) = 0;
 
   // Device selection
   virtual int32_t SetPlayoutDevice(uint16_t index) = 0;

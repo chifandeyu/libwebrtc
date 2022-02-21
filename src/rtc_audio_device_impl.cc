@@ -39,12 +39,22 @@ int32_t AudioDeviceImpl::RecordingDeviceName(uint16_t index,
   return audio_device_module_->RecordingDeviceName(index, name, guid);
 }
 
+int32_t AudioDeviceImpl::GetPlayoutDevice(char name[kAdmMaxDeviceNameSize],
+                                          char guid[kAdmMaxGuidSize]) {
+  return audio_device_module_->GetPlayoutDevice(name, guid);
+}
+
+int32_t AudioDeviceImpl::GetRecordingDevice(char name[kAdmMaxDeviceNameSize],
+                                          char guid[kAdmMaxGuidSize]) {
+  return audio_device_module_->GetRecordingDevice(name, guid);
+}
+
 int32_t AudioDeviceImpl::SetPlayoutDevice(uint16_t index) {
   return audio_device_module_->SetPlayoutDevice(index);
 }
 int32_t AudioDeviceImpl::SetPlayoutDevice(WindowsDeviceType device){
   webrtc::AudioDeviceModule::WindowsDeviceType type;
-  if(device == WindowsDeviceType::kDefaultCommunicationDevice){
+  if (device == libwebrtc::RTCAudioDevice::WindowsDeviceType::kDefaultCommunicationDevice) {
     type = webrtc::AudioDeviceModule::WindowsDeviceType::kDefaultCommunicationDevice;
   }
   else{
@@ -60,7 +70,7 @@ int32_t AudioDeviceImpl::SetRecordingDevice(uint16_t index) {
 
 int32_t AudioDeviceImpl::SetRecordingDevice(WindowsDeviceType device) {
   webrtc::AudioDeviceModule::WindowsDeviceType type;
-  if(device == WindowsDeviceType::kDefaultCommunicationDevice){
+  if (device == libwebrtc::RTCAudioDevice::WindowsDeviceType::kDefaultCommunicationDevice) {
     type = webrtc::AudioDeviceModule::WindowsDeviceType::kDefaultCommunicationDevice;
   }
   else{

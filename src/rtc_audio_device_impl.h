@@ -31,6 +31,10 @@ class AudioDeviceImpl : public RTCAudioDevice {
   int32_t RecordingDeviceName(uint16_t index,
                               char name[kAdmMaxDeviceNameSize],
                               char guid[kAdmMaxGuidSize]) override;
+  int32_t GetPlayoutDevice(char name[kAdmMaxDeviceNameSize],
+                           char guid[kAdmMaxGuidSize]) override;
+  int32_t GetRecordingDevice(char name[kAdmMaxDeviceNameSize],
+                           char guid[kAdmMaxGuidSize]) override;
 
   // Device selection
   virtual int32_t SetPlayoutDevice(uint16_t index) override;
