@@ -55,52 +55,30 @@ enum RTCIceConnectionState {
   RTCIceConnectionStateMax,
 };
 
-class MediaTrackStatistics {
+class MediaTrackStatistics : public RefCountInterface {
  public:
-  MediaTrackStatistics() {}
-  int64_t bytes_received = 0;
-  int64_t bytes_sent = 0;
-  int packets_lost = 0;
-  int packets_received = 0;
-  int packets_sent = 0;
-  int frame_rate_sent = 0;
-  int frame_rate_received = 0;
-  uint32_t rtt = 0;
+  virtual const string getId() = 0;
+  virtual const string getType() = 0;
+  virtual int64_t getTimestamp_us() = 0;
+  virtual int getAudioInputLevel() = 0;
 
-  int64_t ssrc = 0;
-  string msid;
-  string kind;
-  string direction;
-
- public:
-  MediaTrackStatistics(const MediaTrackStatistics* stats) { copy(*stats); }
-
-  MediaTrackStatistics& operator=(const MediaTrackStatistics& rhs) {
-    if (&rhs == this)
-      return *this;
-    return copy(rhs);
-  }
-
-  MediaTrackStatistics& copy(const MediaTrackStatistics& rhs) {
-    direction = rhs.direction;
-    kind = rhs.kind;
-    packets_sent = rhs.packets_sent;
-    packets_received = rhs.packets_received;
-    packets_lost = rhs.packets_lost;
-    bytes_sent = rhs.bytes_sent;
-    bytes_received = rhs.bytes_received;
-    frame_rate_sent = rhs.frame_rate_sent;
-    frame_rate_received = rhs.frame_rate_received;
-    ssrc = rhs.ssrc;
-    rtt = rhs.rtt;
-    msid = rhs.msid;
-    return *this;
-  }
+  virtual int64_t getBytesReceived() = 0;
+  virtual int64_t getBytesSent() = 0;
+  virtual int getPacketsLost() = 0;
+  virtual int getPacketsReceived() = 0;
+  virtual int getPacketsSent() = 0;
+  virtual int getFrameRateSent() = 0;
+  virtual int getFrameRateReceived() = 0;
+  virtual uint32_t getRtt() = 0;
+  virtual int64_t getSsrc() = 0;
+  virtual const string getMsid() = 0;
+  virtual const string getKind() = 0;
+  virtual const string getDirection() = 0;
 };
 
 class TrackStatsObserver : public RefCountInterface {
  public:
-  virtual void OnComplete(const MediaTrackStatistics& reports) = 0;
+  virtual void OnComplete(const scoped_refptr<MediaTrackStatistics> reports) = 0;
 
  protected:
   ~TrackStatsObserver() {}
@@ -120,7 +98,13 @@ class MediaRTCStats : public RefCountInterface {
 typedef fixed_size_function<void(
     const vector<scoped_refptr<MediaRTCStats>> reports)>
     OnStatsCollectorSuccess;
+////
+typedef fixed_size_function<void(
+    const vector<scoped_refptr<MediaTrackStatistics>> statsList)>
+    OnGetStatsSuccess;
 
+typedef fixed_size_function<void(const char* error)> OnGetStatsFailure;
+////
 typedef fixed_size_function<void(const char* error)> OnStatsCollectorFailure;
 
 typedef fixed_size_function<void(const string sdp, const string type)>
@@ -148,6 +132,8 @@ class RTCPeerConnectionObserver {
   virtual void OnIceConnectionState(RTCIceConnectionState state) = 0;
 
   virtual void OnIceCandidate(scoped_refptr<RTCIceCandidate> candidate) = 0;
+
+  virtual void OnSelectedCandidatePairChanged(const char* reason) = 0;
 
   virtual void OnAddStream(scoped_refptr<RTCMediaStream> stream) = 0;
 
@@ -224,6 +210,10 @@ class RTCPeerConnection : public RefCountInterface {
 
   virtual bool GetStats(const RTCVideoTrack* track,
                         scoped_refptr<TrackStatsObserver> observer) = 0;
+
+  virtual void GetStats(const RTCAudioTrack* track,
+                        OnGetStatsSuccess success,
+                        OnGetStatsFailure failure) = 0;
 
   virtual void GetStats(OnStatsCollectorSuccess success,
                         OnStatsCollectorFailure failure) = 0;

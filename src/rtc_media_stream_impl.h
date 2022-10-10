@@ -16,15 +16,28 @@ class WebRTCStatsObserver : public webrtc::StatsObserver {
                       std::string direction)
       : observer_(observer), direction_(direction) {}
 
+  WebRTCStatsObserver(OnGetStatsSuccess success,
+                      OnGetStatsFailure failure,
+                      std::string direction)
+      : success_(success), failure_(failure), direction_(direction) {}
+
   ~WebRTCStatsObserver() {}
 
   static rtc::scoped_refptr<WebRTCStatsObserver> Create(
       scoped_refptr<TrackStatsObserver> observer,
+      OnGetStatsSuccess success, OnGetStatsFailure failure,
       std::string direction) {
-    rtc::scoped_refptr<WebRTCStatsObserver> rtc_stats_observer =
-        rtc::scoped_refptr<WebRTCStatsObserver>(
+    rtc::scoped_refptr<WebRTCStatsObserver> rtc_stats_observer;
+    if(observer){
+        rtc_stats_observer = rtc::scoped_refptr<WebRTCStatsObserver>(
             new rtc::RefCountedObject<WebRTCStatsObserver>(observer,
                                                            direction));
+    } else {
+        rtc_stats_observer = rtc::scoped_refptr<WebRTCStatsObserver>(
+            new rtc::RefCountedObject<WebRTCStatsObserver>(success,
+                                                          failure,
+                                                           direction));
+    }
     rtc_stats_observer->AddRef();
     return rtc_stats_observer;
   }
@@ -33,6 +46,8 @@ class WebRTCStatsObserver : public webrtc::StatsObserver {
 
  private:
   scoped_refptr<TrackStatsObserver> observer_;
+  OnGetStatsSuccess success_ = nullptr;
+  OnGetStatsFailure failure_ = nullptr;
   std::string direction_;
 };
 

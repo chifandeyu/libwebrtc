@@ -670,10 +670,10 @@ bool RTCPeerConnectionImpl::GetStats(
     scoped_refptr<TrackStatsObserver> observer) {
   AudioTrackImpl* impl = static_cast<AudioTrackImpl*>((RTCAudioTrack*)track);
   rtc::scoped_refptr<WebRTCStatsObserver> rtc_observer =
-      WebRTCStatsObserver::Create(observer, "stats");
+      WebRTCStatsObserver::Create(observer, nullptr, nullptr, "stats");
   return rtc_peerconnection_->GetStats(
       rtc_observer.get(), impl->rtc_track(),
-      webrtc::PeerConnectionInterface::kStatsOutputLevelDebug);
+      webrtc::PeerConnectionInterface::kStatsOutputLevelStandard);
 }
 
 bool RTCPeerConnectionImpl::GetStats(
@@ -681,10 +681,25 @@ bool RTCPeerConnectionImpl::GetStats(
     scoped_refptr<TrackStatsObserver> observer) {
   VideoTrackImpl* impl = static_cast<VideoTrackImpl*>((RTCVideoTrack*)track);
   rtc::scoped_refptr<WebRTCStatsObserver> rtc_observer =
-      WebRTCStatsObserver::Create(observer, "recv");
+      WebRTCStatsObserver::Create(observer, nullptr, nullptr, "recv");
   return rtc_peerconnection_->GetStats(
       rtc_observer.get(), impl->rtc_track(),
       webrtc::PeerConnectionInterface::kStatsOutputLevelDebug);
+}
+
+void RTCPeerConnectionImpl::GetStats(
+    const RTCAudioTrack* track,
+    OnGetStatsSuccess success,
+    OnGetStatsFailure failure) {
+  AudioTrackImpl* impl = static_cast<AudioTrackImpl*>((RTCAudioTrack*)track);
+  rtc::scoped_refptr<WebRTCStatsObserver> rtc_observer =
+      WebRTCStatsObserver::Create(nullptr, success, failure, "stats");
+  bool bSuccess = rtc_peerconnection_->GetStats(
+      rtc_observer.get(), impl->rtc_track(),
+      webrtc::PeerConnectionInterface::kStatsOutputLevelStandard);
+  if (!bSuccess && failure) {
+    failure("Failed to initialize PeerConnection");
+  }
 }
 
 void RTCPeerConnectionImpl::GetStats(OnStatsCollectorSuccess success,
@@ -839,6 +854,14 @@ vector<scoped_refptr<RTCRtpReceiver>> RTCPeerConnectionImpl::receivers() {
   return vec;
 }
 
+void RTCPeerConnectionImpl::OnIceSelectedCandidatePairChanged(
+    const cricket::CandidatePairChangeEvent& event) {
+    if (observer_) {
+        const char* szReason = event.reason.c_str();
+        observer_->OnSelectedCandidatePairChanged(szReason);
+    }
+}
+
 RTCSignalingState RTCPeerConnectionImpl::signaling_state() {
   return signaling_state_map[rtc_peerconnection_->signaling_state()];
 }
@@ -874,78 +897,110 @@ void WebRTCStatsCollectorCallback::OnStatsDelivered(
 }
 
 void WebRTCStatsObserver::OnComplete(const webrtc::StatsReports& reports) {
-  MediaTrackStatistics stats;
-
+  scoped_refptr<MediaTrackStatisticsImpl> stats = new RefCountedObject<MediaTrackStatisticsImpl>();
+  std::vector<scoped_refptr<MediaTrackStatistics>> statsList;
   for (auto report : reports) {
-    // 		for (auto kv : report->values())
-    // 		{
-    // 			LOG_WARNING(<< kv.second->display_name() << ": "
-    // << kv.second->ToString());
-    // 		}
+    RTC_LOG(LS_WARNING) << "WebRTCStatsObserver::OnComplete <<======";
+    RTC_LOG(LS_WARNING) << "type:" << report->TypeToString();
+    for (auto kv : report->values())
+    {
+      RTC_LOG(LS_WARNING) << kv.second->display_name() << ": " << kv.second->ToString();
+    }
+    RTC_LOG(LS_WARNING) << "WebRTCStatsObserver::OnComplete ======>>";
+    stats->id = report->id()->ToString();
+    stats->type = std::string(report->TypeToString());
+    stats->timestamp_us = report->timestamp();
 
     const webrtc::StatsReport::Value* kv =
         report->FindValue(webrtc::StatsReport::kStatsValueNameBytesReceived);
     if (kv) {
-      stats.bytes_received = kv->int64_val();
+      stats->bytes_received = kv->int64_val();
     }
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameBytesSent);
     if (kv) {
-      stats.bytes_sent = kv->int64_val();
+      stats->bytes_sent = kv->int64_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameRtt);
     if (kv) {
-      stats.rtt = kv->int64_val();
+      stats->rtt = kv->int64_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNamePacketsSent);
     if (kv) {
-      stats.packets_sent = kv->int_val();
+      stats->packets_sent = kv->int_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameFrameRateSent);
     if (kv) {
-      stats.frame_rate_sent = kv->int_val();
+      stats->frame_rate_sent = kv->int_val();
     }
 
     kv = report->FindValue(
         webrtc::StatsReport::kStatsValueNameFrameRateReceived);
     if (kv) {
-      stats.frame_rate_received = kv->int_val();
+      stats->frame_rate_received = kv->int_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNamePacketsReceived);
     if (kv) {
-      stats.packets_received = kv->int_val();
+      stats->packets_received = kv->int_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNamePacketsLost);
     if (kv) {
-      stats.packets_lost = kv->int_val();
+      stats->packets_lost = kv->int_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameSsrc);
     if (kv) {
-      stats.ssrc = kv->int64_val();
+      stats->ssrc = kv->int64_val();
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameTrackId);
     if (kv) {
-      stats.msid = string(kv->static_string_val());
+      stats->msid = string(kv->static_string_val());
     }
 
     kv = report->FindValue(webrtc::StatsReport::kStatsValueNameMediaType);
     if (kv) {
-      stats.kind = string(kv->static_string_val());
+      stats->kind = string(kv->static_string_val());
     }
 
-    stats.direction = direction_;
+    kv = report->FindValue(webrtc::StatsReport::kStatsValueNameAudioInputLevel);
+    if (kv) {
+      stats->audio_input_level = kv->int_val();
+    }
+
+    stats->direction = direction_;
+    scoped_refptr<MediaTrackStatisticsImpl> ptr = new RefCountedObject<MediaTrackStatisticsImpl>();
+    ptr->audio_input_level = stats->audio_input_level;
+    ptr->bytes_received = stats->bytes_received;
+    ptr->bytes_sent = stats->bytes_sent;
+    ptr->direction = stats->direction;
+    ptr->frame_rate_received = stats->frame_rate_received;
+    ptr->frame_rate_sent = stats->frame_rate_sent;
+    ptr->id = stats->id;
+    ptr->kind = stats->kind;
+    ptr->msid = stats->msid;
+    ptr->packets_lost = stats->packets_lost;
+    ptr->packets_received = stats->packets_received;
+    ptr->packets_sent = stats->packets_sent;
+    ptr->rtt = stats->rtt;
+    ptr->ssrc = stats->ssrc;
+    ptr->timestamp_us = stats->timestamp_us;
+    ptr->type = stats->type;
+    statsList.push_back(ptr);
   }
 
   if (observer_)
     observer_->OnComplete(stats);
 
   observer_ = nullptr;
+
+  if(success_){
+    success_(statsList);
+  }
 
   this->Release();
 }
@@ -967,6 +1022,70 @@ int64_t MediaRTCStatsImpl::timestamp_us() {
 
 const string MediaRTCStatsImpl::ToJson() {
   return stats_->ToJson();
+}
+
+const string MediaTrackStatisticsImpl::getId() {
+  return this->id;
+}
+
+const string MediaTrackStatisticsImpl::getType() {
+  return this->type;
+}
+
+int64_t MediaTrackStatisticsImpl::getTimestamp_us() {
+  return this->timestamp_us;
+}
+
+int MediaTrackStatisticsImpl::getAudioInputLevel() {
+  return this->audio_input_level;
+}
+
+int64_t MediaTrackStatisticsImpl::getBytesReceived() {
+  return bytes_received;
+}
+
+int64_t MediaTrackStatisticsImpl::getBytesSent() {
+  return bytes_sent;
+}
+
+int MediaTrackStatisticsImpl::getPacketsLost() {
+  return packets_lost;
+}
+
+int MediaTrackStatisticsImpl::getPacketsReceived() {
+  return packets_received;
+}
+
+int MediaTrackStatisticsImpl::getPacketsSent() {
+  return packets_sent;
+}
+
+int MediaTrackStatisticsImpl::getFrameRateSent() {
+  return frame_rate_sent;
+}
+
+int MediaTrackStatisticsImpl::getFrameRateReceived() {
+  return frame_rate_received;
+}
+
+uint32_t MediaTrackStatisticsImpl::getRtt() {
+  return rtt;
+}
+
+int64_t MediaTrackStatisticsImpl::getSsrc() {
+  return ssrc;
+}
+
+const string MediaTrackStatisticsImpl::getMsid() {
+  return msid;
+}
+
+const string MediaTrackStatisticsImpl::getKind() {
+  return kind;
+}
+
+const string MediaTrackStatisticsImpl::getDirection() {
+  return direction;
 }
 
 }  // namespace libwebrtc

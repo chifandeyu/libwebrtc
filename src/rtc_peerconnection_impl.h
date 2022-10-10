@@ -31,6 +31,47 @@ class VideoRenderer;
 
 namespace libwebrtc {
 
+class MediaTrackStatisticsImpl : public MediaTrackStatistics{
+public:
+  virtual const string getId() override;
+  virtual const string getType() override;
+  virtual int64_t getTimestamp_us() override;
+  virtual int getAudioInputLevel() override;
+  
+  virtual int64_t getBytesReceived() override;
+  virtual int64_t getBytesSent() override;
+  virtual int getPacketsLost() override;
+  virtual int getPacketsReceived() override;
+  virtual int getPacketsSent() override;
+  virtual int getFrameRateSent() override;
+  virtual int getFrameRateReceived() override;
+  virtual uint32_t getRtt() override;
+  virtual int64_t getSsrc() override;
+  virtual const string getMsid() override;
+  virtual const string getKind() override;
+  virtual const string getDirection() override;
+
+  //stats values
+  int64_t bytes_received = 0;
+  int64_t bytes_sent = 0;
+  int packets_lost = 0;
+  int packets_received = 0;
+  int packets_sent = 0;
+  int frame_rate_sent = 0;
+  int frame_rate_received = 0;
+  uint32_t rtt = 0;
+
+  int64_t ssrc = 0;
+  int audio_input_level = 0;
+  string msid;
+  string kind;
+  string direction;
+  //stats base
+  string id;
+  string type;
+  int64_t timestamp_us = 0;
+};
+
 class RTCPeerConnectionImpl : public RTCPeerConnection,
                               public webrtc::PeerConnectionObserver {
  public:
@@ -74,6 +115,9 @@ class RTCPeerConnectionImpl : public RTCPeerConnection,
       RTCPeerConnectionObserver* observer) override;
 
   virtual void DeRegisterRTCPeerConnectionObserver() override;
+
+  virtual void OnIceSelectedCandidatePairChanged(
+      const cricket::CandidatePairChangeEvent& event) override;
 
   virtual scoped_refptr<RTCRtpTransceiver> AddTransceiver(
       scoped_refptr<RTCMediaTrack> track,
@@ -133,6 +177,10 @@ class RTCPeerConnectionImpl : public RTCPeerConnection,
 
   virtual bool GetStats(const RTCVideoTrack* track,
                         scoped_refptr<TrackStatsObserver> observer) override;
+
+  virtual void GetStats(const RTCAudioTrack* track,
+                        OnGetStatsSuccess success,
+                        OnGetStatsFailure failure) override;
 
   virtual void GetStats(OnStatsCollectorSuccess success,
                         OnStatsCollectorFailure failure) override;
