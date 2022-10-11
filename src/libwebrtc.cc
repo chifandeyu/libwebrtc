@@ -1,4 +1,4 @@
-ï»¿#include "libwebrtc.h"
+#include "libwebrtc.h"
 
 #include "api/scoped_refptr.h"
 #include "rtc_base/ssl_adapter.h"
@@ -26,7 +26,7 @@ std::string string_sprintf(const char* format, Args... args) {
     return str;
 }
 
-  //1 å®šä¹‰rtc::LogSinkå­å¯¹è±¡ï¼Œå®ç°void OnLogMessage(const std::string &message)å‡½æ•°
+  //1 ¶¨Òårtc::LogSink×Ó¶ÔÏó£¬ÊµÏÖvoid OnLogMessage(const std::string &message)º¯Êı
 class SampleLogSink:virtual public rtc::LogSink
 {
 public:
@@ -82,9 +82,9 @@ bool LibWebRTC::Initialize(const char* webrtcLogDir /*= nullptr*/, LoggingLevel 
     rtc::InitializeSSL();
     g_is_initialized = true;
     if(webrtcLogDir){
-      //1. å®šä¹‰æ—¥å¿—æ¥æ”¶å¯¹è±¡
+      //1. ¶¨ÒåÈÕÖ¾½ÓÊÕ¶ÔÏó
       g_logSink = std::make_unique<SampleLogSink>(webrtcLogDir);
-      //2. é…ç½®å¯¹è±¡åŠéœ€è¦çš„æ—¥å¿—ç™»è®°
+      //2. ÅäÖÃ¶ÔÏó¼°ĞèÒªµÄÈÕÖ¾µÇ¼Ç
       rtc::LoggingSeverity loggingSeverity = rtc::LoggingSeverity::WARNING;
       switch (level)
       {

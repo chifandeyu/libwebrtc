@@ -21,7 +21,7 @@ class WebRTCStatsObserver : public webrtc::StatsObserver {
                       std::string direction)
       : success_(success), failure_(failure), direction_(direction) {}
 
-  ~WebRTCStatsObserver() {}
+  virtual ~WebRTCStatsObserver() {}
 
   static rtc::scoped_refptr<WebRTCStatsObserver> Create(
       scoped_refptr<TrackStatsObserver> observer,
